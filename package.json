@@ -1,3 +1,4 @@
+
 {
   "name": "surya-insta-monitor",
   "version": "1.0.0",
@@ -7,6 +8,7 @@
   },
   "dependencies": {
     "express": "^4.21.2",
+    "cors": "^2.8.5",
     "node-cron": "^3.0.3"
   }
 }
