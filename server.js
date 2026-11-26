@@ -1,18 +1,16 @@
 
 const express = require("express");
-const path = require("path");
+const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Public Instagram profile status check
 async function checkInstagram(username) {
-  username = String(username || "")
-    .trim()
-    .replace(/^@/, "");
+  username = String(username || "").trim().replace(/^@/, "");
 
   if (!/^[a-zA-Z0-9._]{1,30}$/.test(username)) {
     return { username, status: "Unknown", message: "Invalid username" };
@@ -23,8 +21,7 @@ async function checkInstagram(username) {
       `https://www.instagram.com/${encodeURIComponent(username)}/`,
       {
         headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120 Safari/537.36",
           "Accept": "text/html"
         },
         signal: AbortSignal.timeout(12000)
@@ -35,7 +32,7 @@ async function checkInstagram(username) {
       return {
         username,
         status: "Unavailable",
-        message: "Profile page returned 404"
+        message: "Profile returned 404; this does not confirm deactivation"
       };
     }
 
@@ -43,14 +40,14 @@ async function checkInstagram(username) {
       const html = await response.text();
 
       if (
-        html.includes("og:title") ||
-        html.includes("profilePage_") ||
-        html.includes("Instagram")
+        html.includes('"is_private"') ||
+        html.includes('"profilePage_') ||
+        html.includes('"edge_followed_by"')
       ) {
         return {
           username,
           status: "Active",
-          message: "Public profile page responded"
+          message: "Public profile indicators found"
         };
       }
     }
@@ -58,35 +55,30 @@ async function checkInstagram(username) {
     return {
       username,
       status: "Unknown",
-      message: `Instagram response: ${response.status}`
+      message: `Could not verify reliably (HTTP ${response.status})`
     };
   } catch (error) {
     return {
       username,
       status: "Unknown",
-      message: "Could not verify profile"
+      message: "Instagram could not be reached or verification was blocked"
     };
   }
 }
 
 app.post("/api/check", async (req, res) => {
-  const username = req.body.username;
-
-  if (!username) {
+  if (!req.body.username) {
     return res.status(400).json({ error: "Username required" });
   }
 
-  const result = await checkInstagram(username);
-  res.json(result);
+  res.json(await checkInstagram(req.body.username));
 });
 
 app.post("/api/check-all", async (req, res) => {
   const usernames = req.body.usernames;
 
   if (!Array.isArray(usernames) || usernames.length > 50) {
-    return res.status(400).json({
-      error: "Send a list of up to 50 usernames"
-    });
+    return res.status(400).json({ error: "Send up to 50 usernames" });
   }
 
   const results = [];
