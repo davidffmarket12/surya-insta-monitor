@@ -1,1 +1,212 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SURYA INSTA MONITOR</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080b14;color:#fff;font-family:Arial,sans-serif;padding:16px}
+.container{max-width:950px;margin:auto}
+header{background:linear-gradient(120deg,#171c38,#30205b);padding:25px;border-radius:16px;margin-bottom:20px;border:1px solid #41446e}
+header h1{font-size:23px;color:#a9b7ff}
+header p{color:#c3c8e0;margin-top:8px;font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.stat,.panel{background:#111827;border:1px solid #27334c;border-radius:13px;padding:17px}
+.stat small{color:#9ba9c6}
+.stat h2{font-size:25px;margin-top:9px}
+.panel{margin-bottom:17px}
+.panel h3{color:#aebcff;margin-bottom:15px}
+input{width:100%;padding:14px;background:#080e1b;border:1px solid #34415e;border-radius:9px;color:white;margin-bottom:10px;outline:none}
+button{padding:12px 16px;border:0;border-radius:8px;background:#596dff;color:white;font-weight:bold;cursor:pointer}
+button.danger{background:#b93650}
+button.secondary{background:#34415e}
+.muted{font-size:12px;color:#8f9bb5;margin-top:7px}
+.list{display:grid;gap:10px}
+.item{background:#0a1120;border:1px solid #28354f;padding:14px;border-radius:11px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.item strong{font-size:15px}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.actions button{font-size:12px;padding:9px 11px}
+.empty{text-align:center;color:#8996b2;padding:20px}
+.note{font-size:12px;line-height:1.6;color:#aab6d0}
+footer{text-align:center;color:#65718c;padding:20px;font-size:12px}
+@media(max-width:500px){header h1{font-size:19px}.stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+<h1>⚡ SURYA INSTA MONITOR</h1>
+<p>Instagram Account & Post Management Dashboard</p>
+</header>
+
+<div class="stats">
+<div class="stat"><small>Total Accounts</small><h2 id="total">0</h2></div>
+<div class="stat"><small>Saved Posts</small><h2 id="postTotal">0</h2></div>
+<div class="stat"><small>Account Limit</small><h2>50</h2></div>
+</div>
+
+<div class="panel">
+<h3>＋ Add Instagram Account</h3>
+<input id="username" placeholder="Enter Instagram username">
+<button onclick="addAccount()">＋ Add Account</button>
+<p class="muted">Username likho, @ lagana zaroori nahi hai.</p>
+</div>
+
+<div class="panel">
+<h3>👤 Instagram Accounts</h3>
+<div class="list" id="accountList"></div>
+</div>
+
+<div class="panel">
+<h3>＋ Add Instagram Post / Reel</h3>
+<input id="postUrl" placeholder="Paste Instagram post or reel URL">
+<button onclick="addPost()">Save Post</button>
+</div>
+
+<div class="panel">
+<h3>📌 Saved Posts / Reels</h3>
+<div class="list" id="postList"></div>
+</div>
+
+<div class="panel">
+<h3>ℹ️ Monitoring Information</h3>
+<p class="note">
+This dashboard saves usernames and post links in your browser.
+It does not automatically fetch Instagram followers, profile pictures,
+account status, archive status or notifications. Those features require
+a secure backend and supported Instagram data access.
+</p>
+</div>
+
+<footer>SURYA INSTA MONITOR • Dashboard</footer>
+</div>
+
+<script>
+let accounts=JSON.parse(localStorage.getItem("surya_accounts")||"[]");
+let posts=JSON.parse(localStorage.getItem("surya_posts")||"[]");
+
+function save(){
+ localStorage.setItem("surya_accounts",JSON.stringify(accounts));
+ localStorage.setItem("surya_posts",JSON.stringify(posts));
+}
+
+function safe(text){
+ return String(text).replace(/[&<>"']/g,c=>({
+ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ })[c]);
+}
+
+function addAccount(){
+ let field=document.getElementById("username");
+ let username=field.value.trim().replace(/^@/,"").replace(/\/$/,"");
+
+ if(!username){alert("Username enter karo!");return;}
+ if(!/^[a-zA-Z0-9._]{1,30}$/.test(username)){
+  alert("Valid Instagram username enter karo.");return;
+ }
+ if(accounts.length>=50){alert("Maximum 50 accounts allowed.");return;}
+ if(accounts.some(a=>a.username.toLowerCase()===username.toLowerCase())){
+  alert("Ye username already added hai.");return;
+ }
+
+ accounts.push({
+  id:Date.now(),
+  username:username,
+  date:new Date().toLocaleDateString()
+ });
+ field.value="";
+ save();
+ render();
+}
+
+function removeAccount(id){
+ if(!confirm("Is account ko delete karna hai?"))return;
+ accounts=accounts.filter(a=>a.id!==id);
+ save();
+ render();
+}
+
+function addPost(){
+ let field=document.getElementById("postUrl");
+ let url=field.value.trim();
+
+ if(!/^https?:\/\/(www\.)?instagram\.com\/(p|reel|tv)\//i.test(url)){
+  alert("Valid Instagram post/reel link paste karo.");return;
+ }
+ if(posts.some(p=>p.url===url)){
+  alert("Ye post already saved hai.");return;
+ }
+
+ posts.push({
+  id:Date.now(),
+  url:url,
+  date:new Date().toLocaleDateString()
+ });
+ field.value="";
+ save();
+ render();
+}
+
+function removePost(id){
+ if(!confirm("Is saved post ko delete karna hai?"))return;
+ posts=posts.filter(p=>p.id!==id);
+ save();
+ render();
+}
+
+function openProfile(username){
+ window.open("https://www.instagram.com/"+encodeURIComponent(username)+"/","_blank");
+}
+
+function openPost(url){
+ window.open(url,"_blank");
+}
+
+function render(){
+ document.getElementById("total").textContent=accounts.length;
+ document.getElementById("postTotal").textContent=posts.length;
+
+ let accountList=document.getElementById("accountList");
+ if(!accounts.length){
+  accountList.innerHTML='<div class="empty">Abhi koi account add nahi hua.</div>';
+ }else{
+  accountList.innerHTML=accounts.map(a=>`
+   <div class="item">
+    <div>
+     <strong>@${safe(a.username)}</strong>
+     <div class="muted">Added: ${safe(a.date)}</div>
+     <div class="muted">Status: Not checked automatically</div>
+    </div>
+    <div class="actions">
+     <button class="secondary" onclick="openProfile('${safe(a.username)}')">Open Profile</button>
+     <button class="danger" onclick="removeAccount(${a.id})">Delete</button>
+    </div>
+   </div>
+  `).join("");
+ }
+
+ let postList=document.getElementById("postList");
+ if(!posts.length){
+  postList.innerHTML='<div class="empty">Abhi koi post save nahi hai.</div>';
+ }else{
+  postList.innerHTML=posts.map(p=>`
+   <div class="item">
+    <div>
+     <strong>Instagram Post / Reel</strong>
+     <div class="muted">Saved: ${safe(p.date)}</div>
+    </div>
+    <div class="actions">
+     <button onclick="openPost('${safe(p.url)}')">Open Post</button>
+     <button class="danger" onclick="removePost(${p.id})">Delete</button>
+    </div>
+   </div>
+  `).join("");
+ }
+}
+render();
+</script>
+</body>
+</html>
